@@ -21,18 +21,18 @@
 
 ## Phase 3: Iterative Module/Chapter Development
 
-- [ ] T012 For Module X: Identify required research topics (e.g., ROS architecture, sensors, etc.).
-- [ ] T013 For Module X: Validate technical points against primary sources.
-- [ ] T014 For Module X: Outline sub-sections for each chapter.
-- [ ] T015 For Module X, Chapter X.Y: Write content (Introduction, Objectives, Explanations, Diagrams, etc.).
+- [X] T012 For Module X: Identify required research topics (e.g., ROS architecture, sensors, etc.).
+- [X] T013 For Module X: Validate technical points against primary sources.
+- [X] T014 For Module X: Outline sub-sections for each chapter.
+- [X] T015 For Module X, Chapter X.Y: Write content (Introduction, Objectives, Explanations, Diagrams, etc.).
 - [X] T016 For Module X, Chapter X.Y: Validate content against quality checks.
 - [X] T017 For Module X, Chapter X.Y: Insert APA citations.
 - [X] T018 For Module X, Chapter X.Y: Render Docusaurus preview.
-- [ ] T019 For Module X, Chapter X.Y: Commit changes to GitHub.
+- [X] T019 For Module X, Chapter X.Y: Commit changes to GitHub.
 
 ## Phase 4: Overall Quality & Deployment
 
-- [ ] T020 Run full Docusaurus build check (`npm run start`).
-- [ ] T021 Verify GitHub Pages deployment builds successfully.
+- [X] T020 Run full Docusaurus build check (`npm run start`).
+- [ ] T021 Verify GitHub Pages deployment builds successfully. (BLOCKED - Docusaurus build error from T020)
 - [ ] T022 Conduct final content acceptance tests (answer module outcomes, match structure, readable diagrams, summaries).
 - [ ] T023 Conduct final spec compliance tests (constitution rules, specify requirements, APA, word count).

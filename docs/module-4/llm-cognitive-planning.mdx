@@ -1,0 +1,157 @@
+---
+title: Cognitive Planning with LLMs
+sidebar_position: 2
+---
+
+## Short Overview
+
+This chapter focuses on using Large Language Models (LLMs) to bridge human intention with technical robot actions, a critical component of high-level robot control and decision-making. It defines the LLM's role in translating abstract goals (like "Clean the room") into concrete sequences of low-level ROS 2 actions. The chapter provides guidance on **prompt engineering** with a template for instructing the LLM on valid robot APIs and demonstrates simplified structured **action sequences** (e.g., JSON or YAML) as LLM output.
+
+## Learning Objectives
+
+By the end of this chapter, you will be able to:
+
+*   Clearly define the role of the LLM: translating a goal ("Clean the room") into a sequence of low-level **ROS 2 actions**.
+*   Provide a template for the system prompt used to instruct the LLM on valid ROS 2 actions (the robot's API).
+*   Demonstrate a simplified example of the LLM outputting a structured action sequence (e.g., JSON or YAML).
+
+## Main Sections
+
+### 1. The Brain of the Robot: LLMs for High-Level Control
+
+While lower-level components handle perception and motor control, intelligent robots need a "brain" to understand high-level human commands and translate them into a series of executable actions. Large Language Models (LLMs) are uniquely suited for this **cognitive planning** role due to their ability to understand natural language, reason, and generate structured text. This chapter emphasizes the **reasoning** and **translation** step within the broader Vision-Language-Action (VLA) loop.
+
+#### LLM's Role in Translating Intent to Action
+
+The core role of an LLM in cognitive planning is to convert an abstract, high-level human goal (e.g., "Take out the trash," "Make me a coffee") into a detailed, ordered sequence of technical, low-level robot actions. These low-level actions are typically defined by the robot's existing ROS 2 API (e.g., specific ROS 2 services or action goals).
+
+*   **Example**: A human says, "Clean the room." The LLM translates this into:
+    1.  `NAVIGATE_TO_LOCATION {location: "kitchen"}`
+    2.  `GRASP_OBJECT {object_type: "trash_bag"}`
+    3.  `NAVIGATE_TO_LOCATION {location: "door_outside"}`
+    4.  `DEPOSIT_OBJECT {object_type: "trash_bag"}`
+
+### 2. Prompt Engineering for Robot Action Generation
+
+The effectiveness of an LLM in cognitive planning heavily relies on **prompt engineering**—crafting the input (the "system prompt") to guide the LLM's behavior and ensure its output adheres to the robot's technical capabilities. The system prompt defines the LLM's role, constraints, and the format for its output.
+
+#### Template for Instructing the LLM on Valid ROS 2 Actions (Robot's API)
+
+A robust system prompt should clearly define the robot's available actions, their parameters, and the expected output format.
+
+```markdown
+You are a robotic task planner. Your goal is to translate high-level human commands into a sequence of low-level ROS 2 actions.
+
+Available ROS 2 Actions (Robot API):
+- NAVIGATE_TO_LOCATION(location: string): Navigates the robot to a predefined location.
+  - Valid locations: "kitchen", "living_room", "bedroom", "door_outside"
+- GRASP_OBJECT(object_type: string): Grasps an object of a specified type.
+  - Valid object_types: "cup", "book", "trash_bag", "remote"
+- DEPOSIT_OBJECT(object_type: string, location: string): Deposits a held object at a specified location.
+  - Valid object_types: "cup", "book", "trash_bag", "remote" (must be currently held)
+  - Valid locations: "table", "shelf", "bin", "floor"
+- TAKE_PHOTO(camera_name: string, save_path: string): Takes a photo with a specified camera and saves it.
+  - Valid camera_names: "front_camera", "left_camera", "right_camera"
+
+Output Format:
+Respond ONLY with a JSON array of action objects. Each object must have an "action" field (corresponding to an Available ROS 2 Action) and an "params" field (a dictionary of parameters for that action). Do NOT include any other text or explanation.
+
+Example Input: "Go to the kitchen and grab the cup, then put it on the table."
+
+Example Output:
+```json
+[
+  {
+    "action": "NAVIGATE_TO_LOCATION",
+    "params": {
+      "location": "kitchen"
+    }
+  },
+  {
+    "action": "GRASP_OBJECT",
+    "params": {
+      "object_type": "cup"
+    }
+  },
+  {
+    "action": "DEPOSIT_OBJECT",
+    "params": {
+      "object_type": "cup",
+      "location": "table"
+    }
+  }
+]
+```
+
+Human Command: [User's high-level command goes here]
+```
+
+### 3. Demonstrating Structured Action Sequence Output
+
+The LLM's output needs to be parsable and executable by the robot's control system. A structured format like JSON or YAML is ideal for this.
+
+#### Simplified Example: LLM Output to ROS 2 System
+
+Building on the previous example:
+
+**Human Command**: "Clean the room by finding the trash and putting it outside."
+
+**LLM System Prompt**: (The template provided above)
+
+**LLM Output (JSON)**:
+```json
+[
+  {
+    "action": "NAVIGATE_TO_LOCATION",
+    "params": {
+      "location": "living_room"
+    }
+  },
+  {
+    "action": "GRASP_OBJECT",
+    "params": {
+      "object_type": "trash_bag"
+    }
+  },
+  {
+    "action": "NAVIGATE_TO_LOCATION",
+    "params": {
+      "location": "door_outside"
+    }
+  },
+  {
+    "action": "DEPOSIT_OBJECT",
+    "params": {
+      "object_type": "trash_bag",
+      "location": "bin"
+    }
+  }
+]
+```
+This structured output can then be parsed by a Python or C++ component in the ROS 2 system. Each action in the sequence is then dispatched to the corresponding ROS 2 service or action client for execution.
+
+### 4. LLM Communication with the ROS 2 System
+
+The connection between the LLM (which performs cognitive planning) and the ROS 2 system (which executes actions) is a crucial interface. This communication typically occurs through ROS 2 service calls or action goals.
+
+*   **Mechanism**: Once the LLM generates a structured action sequence (e.g., the JSON array above), a dedicated ROS 2 node is responsible for:
+    1.  **Parsing**: Interpreting the LLM's output.
+    2.  **Dispatching**: Calling the appropriate ROS 2 services (for instantaneous actions) or sending action goals (for long-running, feedback-enabled actions) as defined in the robot's API.
+    3.  **Feedback**: Monitoring the execution of these ROS 2 actions and potentially feeding status updates back to the LLM for replanning if an action fails.
+
+This discussion emphasizes the **reasoning** and **translation** step of the VLA loop, where the LLM acts as the high-level planner, orchestrating a series of low-level robot behaviors.
+
+## Summary Key Points
+
+*   LLMs are critical for **cognitive planning** in robotics, translating high-level human goals into low-level ROS 2 actions.
+*   **Prompt engineering** is essential to instruct the LLM on the robot's available API and ensure structured output.
+*   LLMs generate structured **action sequences** (e.g., JSON, YAML) that are parsed and executed by the ROS 2 system.
+*   Communication between the LLM and ROS 2 is typically handled via **ROS 2 Service calls** or **Action Goals**.
+*   This process is a key reasoning and translation step within the **VLA loop**.
+
+## Reading/Research References (APA 7th Edition)
+
+*   Huang, W., et al. (2022). *Inner Monologue: Empowering LLMs as Active Reasoners for (Embodied) Agentic Tasks*. arXiv preprint arXiv:2207.05612.
+*   Google Research. (2023). *SayCan: Learning Language Models for Robotic Manipulation*. Retrieved from [https://ai.googleblog.com/2022/03/saycan-learning-language-models-for.html](https://ai.googleblog.com/2022/03/saycan-learning-language-models-for.html)
+*   ROS 2 Documentation. (n.d.). _ROS 2 Actions_. Retrieved from [https://docs.ros.org/en/humble/Tutorials/Actions/Understanding-ROS2-Actions.html](https://docs.ros.org/en/humble/Tutorials/Actions/Understanding-ROS2-Actions.html)
+*   Wen, Y., et al. (2022). *Robotics with Large Language Models: A Review*. arXiv preprint arXiv:2209.05275.

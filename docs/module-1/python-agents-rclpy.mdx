@@ -1,0 +1,207 @@
+---
+title: Python Agents and rclpy
+sidebar_position: 2
+---
+
+## Short Overview
+
+This chapter provides a hands-on guide for developers to implement core ROS 2 communication paradigms—Publishers and Subscribers—using the Python client library, `rclpy`. It focuses on practical code examples, package management with `setup.py` and `package.xml`, and testing procedures to ensure functional ROS 2 Python agents.
+
+## Learning Objectives
+
+By the end of this chapter, you will be able to:
+
+*   Implement complete, runnable Python code for minimal Publisher and Subscriber Nodes using `rclpy`.
+*   Correctly update `setup.py` and `package.xml` to build a Python ROS 2 package.
+*   Build a ROS 2 package using `colcon build` and verify communication with `ros2 run`.
+
+## Main Sections
+
+### 1. Interfacing Python with ROS 2: An Introduction to `rclpy`
+
+ROS 2 offers `rclpy` as its official Python client library, enabling Python developers to easily create nodes and interface with the ROS 2 ecosystem. `rclpy` provides Python bindings for the core ROS Client Library (RCL), allowing for efficient and idiomatic Python development within ROS 2.
+
+### 2. Building a Minimal Publisher Node
+
+A Publisher Node is responsible for sending data to a Topic. In our robot analogy, imagine a "Telemetry Publisher" node on a robot sending sensor readings like battery level or motor status.
+
+#### `telemetry_publisher.py` (Minimal Publisher Node)
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class TelemetryPublisher(Node):
+
+    def __init__(self):
+        super().__init__('telemetry_publisher')
+        self.publisher_ = self.create_publisher(String, 'telemetry_topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Telemetry Data: {self.i}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing: "{msg.data}"')
+        self.i += 1
+
+def main(args=None):
+    rclpy.init(args=args)
+    telemetry_publisher = TelemetryPublisher()
+    rclpy.spin(telemetry_publisher)
+    telemetry_publisher.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### 3. Building a Minimal Subscriber Node
+
+A Subscriber Node is responsible for receiving data from a Topic. Following our analogy, a "Data Logger Subscriber" node might receive the telemetry data and print it to the console, or save it to a file.
+
+#### `data_logger_subscriber.py` (Minimal Subscriber Node)
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class DataLoggerSubscriber(Node):
+
+    def __init__(self):
+        super().__init__('data_logger_subscriber')
+        self.subscription = self.create_subscription(
+            String,
+            'telemetry_topic',
+            self.listener_callback,
+            10)
+        self.subscription  # prevent unused variable warning
+
+    def listener_callback(self, msg):
+        self.get_logger().info(f'I heard: "{msg.data}"')
+
+def main(args=None):
+    rclpy.init(args=args)
+    data_logger_subscriber = DataLoggerSubscriber()
+    rclpy.spin(data_logger_subscriber)
+    data_logger_subscriber.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### 4. ROS 2 Python Package Management
+
+To make these Python nodes runnable within ROS 2, they need to be part of a package. This involves configuring `package.xml` and `setup.py`.
+
+#### `package.xml` Updates
+
+Your `package.xml` should include dependencies for `rclpy` and `std_msgs`, and specify the Python executable format.
+
+```xml
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>my_python_pkg</name>
+  <version>0.0.0</version>
+  <description>TODO: Package description</description>
+  <maintainer email="user@todo.todo">user</maintainer>
+  <license>TODO: License declaration</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+```
+
+#### `setup.py` Updates
+
+The `setup.py` file tells `colcon` how to install your Python scripts as executables.
+
+```python
+from setuptools import find_packages, setup
+
+package_name = 'my_python_pkg'
+
+setup(
+    name=package_name,
+    version='0.0.0',
+    packages=find_packages(exclude=['test']),
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='user',
+    maintainer_email='user@todo.todo',
+    description='TODO: Package description',
+    license='TODO: License declaration',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'telemetry_publisher = my_python_pkg.telemetry_publisher:main',
+            'data_logger_subscriber = my_python_pkg.data_logger_subscriber:main',
+        ],
+    },
+)
+```
+In `entry_points`, we define our executable scripts, mapping a command name (`telemetry_publisher`, `data_logger_subscriber`) to the Python module and main function.
+
+### 5. Building and Verifying Communication
+
+Once your package files are set up, navigate to your ROS 2 workspace (`~/ros2_ws`) and build:
+
+```bash
+colcon build --packages-select my_python_pkg
+```
+After building, source your workspace again in a *new terminal*:
+```bash
+. install/setup.bash
+```
+
+Now, run your nodes:
+
+1.  **Start the publisher**:
+    ```bash
+    ros2 run my_python_pkg telemetry_publisher
+    ```
+2.  **Start the subscriber in a new terminal**:
+    ```bash
+    ros2 run my_python_pkg data_logger_subscriber
+    ```
+
+You should see the subscriber printing the telemetry data from the publisher, confirming successful Python-based ROS 2 communication!
+
+### 6. Example Analogy: Telemetry and Data Logging
+
+Throughout this chapter, we used a simple "Telemetry Publisher" on a robot sending data, and a "Data Logger Subscriber" on a base station receiving and recording that data. This illustrates the fundamental flow of information in a robot system using ROS 2 Topics.
+
+## Summary Key Points
+
+*   `rclpy` is the official Python client library for ROS 2, enabling Python nodes.
+*   Publisher nodes send messages on topics, and Subscriber nodes receive them.
+*   `std_msgs/String` is a common message type for text data.
+*   `package.xml` declares package dependencies, and `setup.py` defines Python executables.
+*   `colcon build` compiles ROS 2 workspaces, and sourcing the setup file integrates them into the environment.
+*   The `ros2 run` command launches nodes, facilitating communication verification.
+
+## Reading/Research References (APA 7th Edition)
+
+*   ROS 2 Documentation. (n.d.). _rclpy (Python client)_. Retrieved from [https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-a-ROS2-Package-With-Python-and-Ament-CMake.html](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-a-ROS2-Package-With-Python-and-Ament-CMake.html)
+*   ROS 2 Documentation. (n.d.). _Writing a Simple Publisher and Subscriber (Python)_. Retrieved from [https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Publisher-And-Subscriber-Python.html](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Publisher-And-Subscriber-Python.html)
+*   _colcon Documentation_. (n.d.). Retrieved from [https://colcon.readthedocs.io/en/released/](https://colcon.readthedocs.io/en/released/)

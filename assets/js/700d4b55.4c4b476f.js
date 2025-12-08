@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunktemp_docusaurus_init=globalThis.webpackChunktemp_docusaurus_init||[]).push([[2094],{7463:o=>{o.exports=JSON.parse('{"metadata":{"permalink":"/Physical-AI-Humanoid-Robotics-TextBook/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":4,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);

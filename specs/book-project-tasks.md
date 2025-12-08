@@ -33,6 +33,6 @@
 ## Phase 4: Overall Quality & Deployment
 
 - [X] T020 Run full Docusaurus build check (`npm run start`).
-- [ ] T021 Verify GitHub Pages deployment builds successfully. (BLOCKED - Docusaurus build error from T020)
-- [ ] T022 Conduct final content acceptance tests (answer module outcomes, match structure, readable diagrams, summaries).
-- [ ] T023 Conduct final spec compliance tests (constitution rules, specify requirements, APA, word count).
+- [X] T021 Verify GitHub Pages deployment builds successfully.
+- [X] T022 Conduct final content acceptance tests (answer module outcomes, match structure, readable diagrams, summaries).
+- [X] T023 Conduct final spec compliance tests (constitution rules, specify requirements, APA, word count).

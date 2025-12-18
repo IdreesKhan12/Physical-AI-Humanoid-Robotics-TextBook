@@ -1,0 +1,7 @@
+httpx
+beautifulsoup4
+cohere
+qdrant-client==1.7.0
+python-dotenv
+lxml
+uuid

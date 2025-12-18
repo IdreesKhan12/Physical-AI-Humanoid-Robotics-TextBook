@@ -1,0 +1,6 @@
+# OpenAPI 3.0 Specification for RAG Agent FastAPI Backend
+# This file will be populated programmatically by FastAPI based on endpoint definitions.
+# Endpoints expected:
+# - POST /ask
+# - POST /debug/retrieval
+# - GET /health

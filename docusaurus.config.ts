@@ -27,6 +27,11 @@ const config: Config = {
 
   onBrokenLinks: 'throw',
 
+  // Custom fields for global data, e.g., environment variables for frontend
+  customFields: {
+    ragBackendUrl: process.env.RAG_BACKEND_URL || 'http://localhost:8000', // Default to localhost
+  },
+
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".

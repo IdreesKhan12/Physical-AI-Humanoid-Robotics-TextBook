@@ -28,3 +28,122 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Chatbot Styles */
+.chatbotContainer {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ifm-contents-border-color);
+  border-radius: var(--ifm-border-radius);
+  height: 400px; /* Adjust as needed */
+  width: 350px;  /* Adjust as needed */
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--ifm-background-color);
+  box-shadow: var(--ifm-shadow-lg);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.messagesContainer {
+  flex-grow: 1;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  padding: 8px 12px;
+  border-radius: var(--ifm-border-radius);
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: var(--ifm-color-primary);
+  color: var(--ifm-color-white);
+}
+
+.message.agent {
+  align-self: flex-start;
+  background-color: var(--ifm-color-secondary);
+  color: var(--ifm-color-white);
+}
+
+.message.error {
+  align-self: flex-start;
+  background-color: var(--ifm-color-danger);
+  color: var(--ifm-color-white);
+}
+
+.messageText {
+  margin-bottom: 5px;
+}
+
+.citations {
+  font-size: 0.75em;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.citations a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.timestamp {
+  font-size: 0.65em;
+  opacity: 0.8;
+  display: block;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.inputContainer {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid var(--ifm-contents-border-color);
+}
+
+.textInput {
+  flex-grow: 1;
+  border: 1px solid var(--ifm-contents-border-color);
+  border-radius: var(--ifm-border-radius);
+  padding: 8px;
+  margin-right: 10px;
+  background-color: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+}
+
+.sendButton {
+  background-color: var(--ifm-color-primary);
+  color: var(--ifm-color-white);
+  border: none;
+  border-radius: var(--ifm-border-radius);
+  padding: 8px 15px;
+  cursor: pointer;
+}
+
+.sendButton:disabled {
+  background-color: var(--ifm-color-light);
+  cursor: not-allowed;
+}
+
+/* Adjust main content when chatbot is open */
+.mainWrapperWithChatbot {
+  /* Add a margin to the right to avoid content being obscured by the chatbot */
+  margin-right: 420px; /* Adjust based on chatbot width + some padding */
+  transition: margin-right 0.3s ease-in-out;
+}
+
+/* On smaller screens, you might want to handle this differently, e.g., hide the chatbot or use a different layout */
+@media (max-width: 996px) {
+  .mainWrapperWithChatbot {
+    margin-right: 0; /* Reset margin on smaller screens */
+  }
+}
+

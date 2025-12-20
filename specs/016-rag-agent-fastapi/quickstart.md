@@ -10,7 +10,6 @@ This guide provides instructions on how to set up, run, and interact with the RA
     cd backend/
     uv pip install -r requirements.txt
     ```
-    *(Note: `requirements.txt` will be created during the implementation phase.)*
 
 ## 2. Configuration
 

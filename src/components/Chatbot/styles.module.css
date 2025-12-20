@@ -1,0 +1,204 @@
+/* src/components/Chatbot/styles.module.css */
+
+.chatbotContainer {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ifm-contents-border-color);
+  border-radius: var(--ifm-border-radius);
+  height: 500px;
+  width: 400px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--ifm-background-color);
+  box-shadow: var(--ifm-shadow-lg);
+  z-index: 1000;
+  overflow: hidden;
+  font-family: var(--ifm-font-family-base);
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  transform: translateY(100%) scale(0.8); /* Start off-screen and smaller */
+  opacity: 0;
+  pointer-events: none; /* Disable interaction when hidden */
+}
+
+.chatbotContainer.open {
+  transform: translateY(0%) scale(1);
+  opacity: 1;
+  pointer-events: auto; /* Enable interaction when open */
+}
+
+.chatbotToggleButton {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--ifm-color-primary);
+  color: var(--ifm-color-white);
+  border: none;
+  font-size: 1.5em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: var(--ifm-shadow-md);
+  z-index: 1001; /* Above the chatbot container */
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.chatbotToggleButton:hover {
+  background-color: var(--ifm-color-primary-dark);
+  transform: scale(1.05);
+}
+
+.chatbotToggleButton.open {
+    background-color: var(--ifm-color-danger); /* Change color when open */
+}
+
+.chatbotToggleButton.open:hover {
+    background-color: var(--ifm-color-danger-dark);
+}
+
+
+.messagesContainer {
+  flex-grow: 1;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: var(--ifm-background-surface-color);
+}
+
+.message {
+  padding: 8px 12px;
+  border-radius: var(--ifm-border-radius);
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 0.9em;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: var(--ifm-color-primary);
+  color: var(--ifm-color-white);
+  border-bottom-right-radius: 2px;
+}
+
+.message.agent {
+  align-self: flex-start;
+  background-color: var(--ifm-color-emphasis-100);
+  color: var(--ifm-font-color-base);
+  border-bottom-left-radius: 2px;
+}
+
+.message.error {
+  align-self: flex-start;
+  background-color: var(--ifm-color-danger);
+  color: var(--ifm-color-white);
+}
+
+.messageText {
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+.citations {
+  font-size: 0.75em;
+  margin-top: 5px;
+  color: var(--ifm-font-color-secondary);
+  border-top: 1px solid var(--ifm-contents-border-color);
+  padding-top: 5px;
+  word-break: break-all; /* Ensure long URLs don't break layout */
+}
+
+.citations a {
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.citations a:hover {
+  text-decoration: underline;
+}
+
+.timestamp {
+  font-size: 0.65em;
+  opacity: 0.7;
+  display: block;
+  text-align: right;
+  margin-top: 2px;
+  color: var(--ifm-font-color-secondary);
+}
+
+.inputContainer {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid var(--ifm-contents-border-color);
+  background-color: var(--ifm-background-color);
+}
+
+.textInput {
+  flex-grow: 1;
+  border: 1px solid var(--ifm-contents-border-color);
+  border-radius: var(--ifm-border-radius);
+  padding: 8px;
+  margin-right: 10px;
+  background-color: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font-size: 0.9em;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--ifm-color-primary-rgb), 0.2);
+}
+
+.sendButton {
+  background-color: var(--ifm-color-primary);
+  color: var(--ifm-color-white);
+  border: none;
+  border-radius: var(--ifm-border-radius);
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.sendButton:hover:not(:disabled) {
+  background-color: var(--ifm-color-primary-dark);
+}
+
+.sendButton:disabled {
+  background-color: var(--ifm-color-light);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.selectedContext {
+    background-color: var(--ifm-color-primary-light);
+    color: var(--ifm-color-white);
+    padding: 8px;
+    border-radius: var(--ifm-border-radius);
+    font-size: 0.8em;
+    margin: 5px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.clearSelectionButton {
+    background: none;
+    border: none;
+    color: var(--ifm-color-white);
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 1.1em;
+}
+
+.clearSelectionButton:hover {
+    color: var(--ifm-color-danger);
+}

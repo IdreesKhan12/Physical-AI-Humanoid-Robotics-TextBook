@@ -59,3 +59,12 @@ jspm_packages/
 # Docusaurus
 .docusaurus/
 build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+*.egg-info/
+.env

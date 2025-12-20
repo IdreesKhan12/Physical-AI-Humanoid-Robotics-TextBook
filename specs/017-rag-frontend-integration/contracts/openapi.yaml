@@ -1,0 +1,9 @@
+# OpenAPI 3.0 Specification for RAG Agent FastAPI Backend (Reference)
+# This file serves as a reference to the backend's OpenAPI specification (from Spec-4).
+# The frontend will interact with the endpoints defined in:
+# `specs/004-rag-agent-fastapi/contracts/openapi.yaml`
+
+# Endpoints:
+# - POST /ask
+# - POST /debug/retrieval (for backend debugging, not directly used by chatbot UI)
+# - GET /health

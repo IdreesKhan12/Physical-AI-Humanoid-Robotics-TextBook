@@ -67,5 +67,9 @@ __pycache__/
 venv/
 dist/
 *.egg-info/
+
+# Environment variables
 .env
-*.env
+.env.*
+backend/.env
+backend/my_config.py

@@ -11,7 +11,7 @@ from backend.retrieval import search_qdrant
 from backend.retrieval import deterministic_context_builder
 
 QDRANT_COLLECTION_NAME = "physical_ai_textbook"
-GEMINI_API_KEY="AIzaSyAIGGGOCYHZwgKJuw60Ren67Agbb2VFEQo"
+
 # from backend.retrieval import get_query_embedding, search_qdrant, deterministic_context_builder, QDRANT_COLLECTION_NAME
 # from backend.utils import get_env_variable
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 class RAGAgent:
-    def __init__(self, model: str = "gemini-1.5-flash", max_context_tokens: int = 8000):
+    def __init__(self, model: str = "gemini-2.0-flash", max_context_tokens: int = 8000):
         self.model = genai.GenerativeModel(model)
         self.max_context_tokens = max_context_tokens
 

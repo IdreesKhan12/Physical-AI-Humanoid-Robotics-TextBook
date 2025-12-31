@@ -29,8 +29,9 @@ const config: Config = {
 
   // Custom fields for global data, e.g., environment variables for frontend
   customFields: {
-    ragBackendUrl: process.env.RAG_BACKEND_URL || 'http://localhost:8000', // Default to localhost
+    ragBackendUrl: process.env.RAG_BACKEND_URL || 'http://127.0.0.1:8002', // Default to localhost
   },
+//'http://localhost:8000'
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you

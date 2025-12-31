@@ -49,7 +49,7 @@ const getBackendUrl = (): string => {
     // During local development, process.env.RAG_BACKEND_URL will be available if set.
     // For Docusaurus build, we might need to inject it differently or use a custom plugin.
     // For now, assume it's available or default to localhost.
-    return process.env.RAG_BACKEND_URL || 'http://localhost:8000';
+    return process.env.RAG_BACKEND_URL || 'http://127.0.0.1:8002';
 };
 
 const BACKEND_URL = getBackendUrl();

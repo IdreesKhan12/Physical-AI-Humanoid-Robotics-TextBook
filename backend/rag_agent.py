@@ -1,118 +1,166 @@
-from typing import List, Dict, Optional
-import google.generativeai as genai
-# from google import genai
+from agents import Agent, Runner 
+from backend.my_config import openrouter_key, open_router_config
+from backend.retrieval import retrieve_data
+from pydantic import BaseModel
+from typing import List, Dict , Literal
 
-import json
 import logging
-import time
-
-from backend.retrieval import get_query_embedding
-from backend.retrieval import search_qdrant
-from backend.retrieval import deterministic_context_builder
-
-QDRANT_COLLECTION_NAME = "physical_ai_textbook"
-
-# from backend.retrieval import get_query_embedding, search_qdrant, deterministic_context_builder, QDRANT_COLLECTION_NAME
-# from backend.utils import get_env_variable
-
 logger = logging.getLogger(__name__)
 
-# Configure Gemini client
-# genai.configure(api_key=get_env_variable("GEMINI_API_KEY"))
-# genai.configure(api_key=GEMINI_API_KEY)
-# client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-class RAGAgent:
-    def __init__(self, model: str = "gemini-2.0-flash", max_context_tokens: int = 8000):
-        self.model = genai.GenerativeModel(model)
-        self.max_context_tokens = max_context_tokens
+QDRANT_COLLECTION_NAME="physical_ai_textbook"
 
-    def _get_gemini_prompt(self, context: str, question: str) -> str:
-        """
-        Generates the prompt for the Gemini LLM, including the retrieved context.
-        """
-        return f"""You are a helpful assistant that answers questions about the book "Physical AI & Humanoid Robotics".
-Your answers MUST be strictly grounded in the provided context. If the answer cannot be found in the context,
-you MUST state "I cannot answer this question based on the provided context." Do NOT make up information.
 
-When providing an answer, cite the source URL and heading from the context.
-Format citations as "[Source: <URL>, Heading: <Heading>]" at the end of the sentence or paragraph it supports.
-If no specific heading is available, just use the URL.
 
-Context:
-{context}
 
-Question: {question}
-"""
+class ChatMessage(BaseModel):
+    role: Literal["user", "bot"]
+    text: str
 
-    def answer_question(self, question: str, selected_text: Optional[str] = None) -> Dict:
-        """
-        Answers a question using RAG by retrieving context and querying a Gemini LLM.
-        """
-        start_time = time.time()
-        try:
-            # 1. Generate query embedding
-            logger.info("Generating query embedding...")
-            query_text = f"{selected_text} {question}" if selected_text else question
-            query_embedding = get_query_embedding(query_text)
-            logger.info("Query embedding generated.")
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
 
-            # 2. Search Qdrant for relevant chunks
-            logger.info(f"Searching Qdrant collection '{QDRANT_COLLECTION_NAME}'...")
-            retrieved_chunks = search_qdrant(query_embedding,collection_name=QDRANT_COLLECTION_NAME , k=10)
 
-            if not retrieved_chunks:
-                logger.warning(f"No chunks retrieved for question: '{question}'")
-                return {
-                    "answer": "I cannot answer this question based on the provided context.",
-                    "citations": [],
-                    "metadata": {"retrieval_score": 0.0, "model_used": "gemini-1.5-flash", "response_time_ms": int((time.time() - start_time) * 1000)}
-                }
-            
-            avg_retrieval_score = sum([c['score'] for c in retrieved_chunks]) / len(retrieved_chunks)
-            logger.info(f"Retrieved {len(retrieved_chunks)} chunks with average score: {avg_retrieval_score:.2f}")
 
-            # 3. Build context for the LLM
-            logger.info("Building context for LLM...")
-            context = deterministic_context_builder(retrieved_chunks, self.max_context_tokens)
-            logger.info("Context built.")
 
-            # 4. Query LLM
-            logger.info("Querying Gemini LLM...")
-            prompt = self._get_gemini_prompt(context, question)
-            
-            response = self.model.generate_content(prompt)
+async def chat(request: ChatRequest):
+    
+    print("📥 Received messages:", request.messages)
+    
+    agent = Agent(
+        name="Physical AI & Humanoid Robotics Agent",
+        instructions= """
+You are the **Specialized AI Assistant** for the **Physical AI & Humanoid Robotics Capstone Course**.
+Your primary function is to support students in understanding the curriculum, hardware prerequisites, system architectures, and foundational principles that connect a digital AI "brain" to a physical robotic body.
 
-            
-            agent_answer = response.text
-            logger.info("LLM responded.")
 
-            # 5. Extract citations (simple approach)
-            citations = []
-            for chunk in retrieved_chunks:
-                citations.append({
-                    "url": chunk.get("url", "N/A"),
-                    "heading": chunk.get("heading", "N/A"),
-                    "chunk_text_snippet": chunk.get("chunk_text", "")[:100] + "..."
-                })
-            
-            end_time = time.time()
-            response_time_ms = int((end_time - start_time) * 1000)
-            logger.info(f"RAG Agent finished processing in {response_time_ms}ms.")
+---
 
-            return {
-                "answer": agent_answer,
-                "citations": citations,
-                "metadata": {
-                    "retrieval_score": avg_retrieval_score,
-                    "model_used": "gemini-1.5-flash",
-                    "response_time_ms": response_time_ms
-                }
-            }
+## **COURSE CONTEXT**
 
-        except Exception as e:
-            logger.exception(f"Error in RAG Agent for question: '{question}'")
-            raise 
-            
+**Domain:** Embodied AI — the integration of machine intelligence with robots operating in simulated and real physical environments.
+**Objective:** Guide students as they apply AI techniques to humanoid and quadruped robots using **ROS 2**, **Gazebo**, **Unity**, and **NVIDIA Isaac**.
 
+---
+
+## **CURRICULUM OVERVIEW**
+
+### **1. The Robotic Nervous System (ROS 2)**
+* Node graph architecture
+* Topics, services, actions
+* `rclpy` development
+* URDF modeling and kinematics
+
+### **2. The Digital Twin (Simulation Layer)**
+* **Gazebo** physics-based simulation
+* **Unity** for high-level visualization
+* Collision dynamics, LiDAR, depth camera modeling
+
+### **3. The AI–Robot Brain (NVIDIA Isaac)**
+* Isaac Sim for photorealistic simulation
+* Isaac ROS for perception (e.g., VSLAM)
+* Nav2 for mapping, navigation, motion planning
+
+### **4. Vision–Language–Action (VLA) Systems**
+* Whisper for speech-to-text
+* LLMs for goal decomposition
+* Mapping natural-language commands to ROS 2 action graphs
+* Example: "Clean the room" → perception → navigation → manipulation sequence
+
+---
+
+## **HARDWARE REQUIREMENTS (CRITICAL)**
+
+### **Simulation Workstation**
+* **GPU:** NVIDIA RTX 4070 Ti (12GB VRAM) minimum (Recommended: RTX 3090/4090)
+* **CPU:** Intel i7 (13th Gen+) or equivalent
+* **RAM:** 64GB DDR5
+* **OS:** Ubuntu 22.04 LTS
+
+### **Edge AI Deployment**
+* NVIDIA Jetson Orin Nano (8GB) or Orin NX
+
+### **Sensors**
+* Intel RealSense D435i
+* USB IMU (generic)
+* ReSpeaker Microphone Array
+
+### **Robotics Platforms**
+* Unitree Go2 Edu (quadruped proxy)
+* Unitree G1 (humanoid)
+* Hiwonder TonyPi Pro (budget option for kinematics labs)
+
+---
+
+## **LAB SETUP OPTIONS**
+
+### **On-Prem (High CapEx)**
+Hardware-owned physical labs using local workstations and robots.
+
+### **Cloud / Ether Lab (High OpEx)**
+* AWS g5.2xlarge GPU instances (~$205/quarter)
+* Jetson kit for local robotic deployment (~$700)
+
+---
+
+## **ANSWERING RULES**
+
+### **1. Mandatory Tool Use**
+Before answering **any question** related to:
+* Humanoid robotics
+*  AI
+* ROS 2
+* Isaac
+* Sensors
+* Simulation
+
+You **must call the `retrieve_data` tool** to access relevant information from the course knowledge base.
+Only respond after retrieving and summarizing the data.
+
+### **2. Tone & Style**
+* Technical, academic, and helpful
+* Use Markdown formatting
+* Highlight important terms in **bold**
+
+### **3. Scope**
+* Stick strictly to course material + retrieved knowledge base
+* Avoid unsupported speculation
+* Produce accurate, concise explanations
+
+### **4. Refusals**
+Politely decline unrelated questions (e.g., weather, humor, politics).
+
+### **5. Hardware-Specific Answers**
+* Always include precise specs (VRAM, OS version, CPU class)
+* Identify performance bottlenecks where relevant
+
+---
+
+You operate strictly under these constraints and respond consistently according to them.
+        """ 
+    )
+
+    print("⚙️ Running agent (Non-Streamed)...")
+    
+
+    conversation_input = "\n".join(
+        [f"{msg.role}: {msg.text}" for msg in request.messages]
+    )
+
+    result = await Runner.run(
+        agent,
+        input=conversation_input,
+        run_config=open_router_config,
+    )
+
+    print("✅ Response generated successfully")
+    
+    
+    # return {"role": "bot", "text": result.final_output}
+    return {
+        "answer": result.final_output,
+        "metadata": {
+            "model_used": "openrouter"
+        }
+    }
 

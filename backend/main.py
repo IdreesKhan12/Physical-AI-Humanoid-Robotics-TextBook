@@ -15,47 +15,6 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Import other modules after loading .env
-# # from backend.rag_agent import RAGAgent
-# from backend.retrieval import get_query_embedding, search_qdrant, QDRANT_COLLECTION_NAME
-# from backend.utils import check_qdrant_status, check_cohere_status, check_gemini_status
-
-# Initialize FastAPI app
-app = FastAPI()
-
-# Add CORS middleware
-# origins = [
-#     "http://localhost:3000",  # Docusaurus frontend default port
-#     "http://127.0.0.1:3000",
-# ]
-
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "file://",
-]
-
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-
 
 # Placeholder for Qdrant client, Cohere client, Gemini client
 # These will be properly initialized in later tasks
@@ -64,9 +23,7 @@ cohere_client = None
 gemini_client = None
 
 # Initialize RAG Agent globally (can be done during lifespan in future if needed)
-from backend.rag_agent import RAGAgent
-rag_agent = RAGAgent()
-
+from backend.rag_agent import ChatMessage, ChatRequest, chat
 # Pydantic models for request and response
 class QueryInput(BaseModel):
     question: str
@@ -127,7 +84,23 @@ async def lifespan(app: FastAPI):
     logger.info("FastAPI app shutdown complete.")
 
 app = FastAPI(lifespan=lifespan)
+# Add CORS middleware
+origins = [
+    "http://localhost:3000",    # Docusaurus frontend default port
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "file://",
+    "https://idreeskhan12.github.io/Physical-AI-Humanoid-Robotics-TextBook/",
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health", response_model=HealthStatus, status_code=status.HTTP_200_OK)
 async def health_check():
@@ -156,28 +129,62 @@ async def health_check():
         timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
 
-@app.post("/ask", response_model=AgentResponse, status_code=status.HTTP_200_OK)
+from backend.retrieval import retrieve_data, build_context
+
+
+@app.post("/ask")
 async def ask_question(query: QueryInput):
-    """
-    Endpoint to ask a question to the RAG Agent and get a grounded answer.
-    """
     logger.info(f"Received /ask request for question: {query.question}")
-    try:
-        response_data = rag_agent.answer_question(query.question, query.selected_text)
-        logger.info(f"Agent responded to '{query.question}': {response_data['answer'][:100]}...") # Log first 100 chars
-        return AgentResponse(**response_data)
-    except ValueError as e:
-        logger.error(f"Bad request for /ask: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.exception(f"An unexpected error occurred in /ask for question: {query.question}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {e}"
-        )
+
+    # 1️⃣ Retrieve relevant chunks (DETERMINISTIC)
+    retrieved_chunks = retrieve_data(query.question)
+
+    # 2️⃣ Out-of-book handling
+    if not retrieved_chunks:
+        return {
+            "answer": "This question is not covered in the course material.",
+            "citations": [],
+            "metadata": {
+                "retrieval_score": 0.0,
+                "model_used": "none",
+                "response_time_ms": 0
+            }
+        }
+
+    # 3️⃣ Build context
+    context = build_context(retrieved_chunks)
+
+    # 4️⃣ Create strict RAG prompt
+    rag_prompt = f"""
+You are a course assistant.
+
+Answer the question using ONLY the information below.
+If the answer is not present, say clearly:
+"This topic is not covered in the course material."
+
+COURSE MATERIAL:
+{context}
+
+QUESTION:
+{query.question}
+"""
+
+    # 5️⃣ Send to agent
+    request = ChatRequest(
+        messages=[ChatMessage(role="user", text=rag_prompt)]
+    )
+
+    response = await chat(request)
+
+    return {
+        "answer": response["answer"],
+        "citations": [],
+        "metadata": {
+            "retrieval_score": retrieved_chunks[0].get("score", 0.0),
+            "model_used": "openrouter",
+            "response_time_ms": 0
+        }
+    }
 
 @app.post("/debug/retrieval", response_model=RetrievalDebugResponse, status_code=status.HTTP_200_OK)
 async def debug_retrieval(query: QueryInput):

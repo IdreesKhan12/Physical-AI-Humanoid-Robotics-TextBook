@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import styles from './styles.module.css';
 
 interface Message {
-  id: string;
+  id: string
   sender: 'user' | 'agent';
   text: string;
   timestamp: string;
@@ -16,7 +16,16 @@ interface ChatbotProps {
 }
 
 const Chatbot: React.FC<ChatbotProps> = ({ backendUrl, onToggle }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+  {
+    id: 'welcome',
+    sender: 'agent',
+    text:
+      '👋 Hi! I’m your Physical AI Textbook Assistant.\n\nAsk me anything related to this book.',
+    timestamp: new Date().toISOString()
+  }
+]);
+
   const [input, setInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

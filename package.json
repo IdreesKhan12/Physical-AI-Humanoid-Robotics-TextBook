@@ -2,6 +2,7 @@
   "name": "temp-docusaurus-init",
   "version": "0.0.0",
   "private": true,
+  "proxy": "http://127.0.0.1:8002",
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",

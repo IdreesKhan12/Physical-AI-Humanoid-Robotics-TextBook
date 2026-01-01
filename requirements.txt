@@ -6,3 +6,4 @@ httpx
 requests
 openai
 tiktoken
+openai-agents>=0.6.1

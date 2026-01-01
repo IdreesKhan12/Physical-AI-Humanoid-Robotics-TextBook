@@ -1,12 +1,13 @@
 from typing import List, Dict, Optional
 from qdrant_client import QdrantClient, models
 import os
-import cohere # Added import
 import logging # Import logging
 from backend.utils import get_env_variable
 from qdrant_client.models import Filter
 import time
 from dotenv import load_dotenv
+from fastapi import HTTPException
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,10 @@ qdrant_client = QdrantClient(
 
 )
 
-# Initialize Cohere Client
-cohere_client = cohere.Client(get_env_variable("COHERE_API_KEY"))
-
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
 
 def build_context(chunks: list[dict], max_tokens: int = 1200) -> str:
     context = []
@@ -50,25 +52,28 @@ def build_context(chunks: list[dict], max_tokens: int = 1200) -> str:
 
     return "\n\n".join(context)
 
-
-
-
-
 def get_embedding(text: str):
-    response = cohere_client.embed(
-        model="embed-english-v3.0",
-        input_type="search_query",
-        texts=[text],
-    )
-    return response.embeddings[0]
-
-
+    try:
+        resp = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text
+        )
+        return resp.data[0].embedding
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def retrieve_data(query: str) -> list[str]:
     """
     Retrieve relevant textbook chunks from Qdrant
     """
     embedding = get_embedding(query)
+
+    
+    if embedding is None:
+        raise HTTPException(
+            status_code=429,
+            detail="Embedding rate limit exceeded. Please try later."
+        )
 
     results = qdrant_client.query_points(
         collection_name=QDRANT_COLLECTION_NAME,

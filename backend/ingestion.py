@@ -1,25 +1,30 @@
 import os
 import httpx
 from bs4 import BeautifulSoup
-import cohere
 from qdrant_client import QdrantClient, models
 from dotenv import load_dotenv
 import uuid
 import time
 import hashlib
+from openai import OpenAI
+
 
 load_dotenv()
 
 # --- Configuration ---
 SITEMAP_URL = "https://idreeskhan12.github.io/Physical-AI-Humanoid-Robotics-TextBook/sitemap.xml"
-COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION_NAME = "physical_ai_textbook"
-COHERE_EMBEDDING_MODEL = "embed-english-v3.0"
+EMBEDDING_MODEL = "text-embedding-3-small"
+VECTOR_SIZE = 1536
 
 # --- Client Initialization ---
-co = cohere.Client(COHERE_API_KEY)
+openrouter_client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
+
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=60)
 
 def get_all_urls(sitemap_url: str) -> list[str]:
@@ -74,21 +79,19 @@ def generate_deterministic_id(content_hash: str) -> str:
     """Generates a UUID for a text chunk based on its content's hash to ensure idempotency."""
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, content_hash))
 
-def embed_chunks(chunks: list[str], cohere_client) -> list[list[float]]:
-    """Generates embeddings for a list of text chunks using the Cohere client."""
-    if not chunks:
-        return []
-    
-    try:
-        response = cohere_client.embed(
-            texts=chunks,
-            model=COHERE_EMBEDDING_MODEL,
-            input_type="search_document"
+def embed_chunks(chunks: list[str]) -> list[list[float]]:
+    embeddings = []
+
+    for text in chunks:
+        resp = openrouter_client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=text
         )
-        return response.embeddings
-    except Exception as e:
-        print(f"Error generating embeddings: {e}")
-        return []
+        embeddings.append(resp.data[0].embedding)
+        time.sleep(0.4)  # rate-limit protection
+
+    return embeddings
+
 
 def create_and_store_vectors(chunks_data: list[dict], collection_name: str, qdrant_client):
     """Creates the Qdrant collection if it doesn't exist, then upserts the vectors."""
@@ -99,7 +102,7 @@ def create_and_store_vectors(chunks_data: list[dict], collection_name: str, qdra
         print(f"Collection '{collection_name}' not found, creating it.")
         qdrant_client.create_collection(
             collection_name=collection_name,
-            vectors_config=models.VectorParams(size=1024, distance=models.Distance.COSINE),
+            vectors_config=models.VectorParams(size=1536, distance=models.Distance.COSINE),
         )
     
     points = []
@@ -161,7 +164,7 @@ def main():
         batch_texts = [item["chunk_text"] for item in batch]
         
         embedding_start_time = time.time()
-        embeddings = embed_chunks(batch_texts, co)
+        embeddings = embed_chunks(batch_texts)
         embedding_end_time = time.time() 
         print(f"Embedded batch {i//batch_size + 1}/{(len(all_chunks_with_metadata) + batch_size - 1)//batch_size} in {embedding_end_time - embedding_start_time:.2f} seconds.")
 

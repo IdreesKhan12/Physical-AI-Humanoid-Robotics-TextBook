@@ -45,12 +45,7 @@ class MatchedChunk(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
-    sources: List[str]
-    matched_chunks: List[MatchedChunk]
-    error: Optional[str] = None
-    status: str  # "success", "error", "empty"
-    query_time_ms: Optional[float] = None
-    confidence: Optional[str] = None
+    status: str = "success"
 
 class HealthResponse(BaseModel):
     status: str
@@ -88,44 +83,23 @@ async def ask_rag(request: QueryRequest):
 
         # Process query through RAG agent
         response = await rag_agent.query_agent(request.question)
+        
+        # 🔒 LOG DEBUG DATA (not returned)
+        logger.info(f"Sources: {response.get('sources')}")
+        logger.info(f"Similarity scores: {[c.get('similarity_score') for c in response.get('matched_chunks', [])]}")
 
-        # Format response
-        formatted_response = QueryResponse(
-            answer=response.get("answer", ""),
-            sources=response.get("sources", []),
-            matched_chunks=[
-                MatchedChunk(
-                    content=chunk.get("content", ""),
-                    url=chunk.get("url", ""),
-                    position=chunk.get("position", 0),
-                    similarity_score=chunk.get("similarity_score", 0.0)
-                )
-                for chunk in response.get("matched_chunks", [])
-            ],
-            error=response.get("error"),
-            status="error" if response.get("error") else "success",
-            query_time_ms=response.get("query_time_ms"),
-            confidence=response.get("confidence")
+        return QueryResponse(
+            answer=response.get("answer", "No answer found"),
+            status="success"
         )
-
-        # logger.info(f"Query processed successfully in {response.get('query_time_ms', 0):.2f}ms")
-        qt = response.get("query_time_ms")
-        if qt is not None:
-            logger.info(f"Query processed successfully in {qt:.2f}ms")
-        else:
-            logger.info("Query processed with unknown execution time")
-
-        return formatted_response
 
     except HTTPException:
         raise
+
     except Exception as e:
         logger.error(f"Error processing query: {e}")
         return QueryResponse(
-            answer="",
-            sources=[],
-            matched_chunks=[],
-            error=str(e),
+            answer="Something went wrong while processing your question.",
             status="error"
         )
 

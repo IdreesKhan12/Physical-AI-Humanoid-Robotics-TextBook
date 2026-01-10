@@ -29,7 +29,7 @@ const config: Config = {
 
   // Custom fields for global data, e.g., environment variables for frontend
   customFields: {
-    ragBackendUrl: 'https://web-production-18909.up.railway.app/ask', // Default to localhost
+    ragBackendUrl: 'https://web-production-18909.up.railway.app', // Default to localhost
   },
 //'http://localhost:8000'
 

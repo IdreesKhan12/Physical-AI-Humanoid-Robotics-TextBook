@@ -112,7 +112,7 @@ You are a course assistant.
             logger.info(f"Processing query: {query_text}")
 
             # 🔥 STEP 1: FORCE retrieval yourself
-            # from backend.rag_agent import retrieve_information
+            # from rag_agent import retrieve_information
             retrieval = retrieve_information_internal(query_text)
 
             chunks = retrieval.get("retrieved_chunks", [])

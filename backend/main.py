@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Import the existing RAG agent functionality
-from backend.rag_agent import RAGAgent
+from rag_agent import RAGAgent
 
 # Create FastAPI app
 app = FastAPI(

@@ -29,7 +29,7 @@ def init_openai_client():
     set_default_openai_client(client)
 
 def retrieve_information_internal(query: str) -> Dict:
-    from backend.retrieval import RAGRetriever
+    from retrieval import RAGRetriever
     retriever = RAGRetriever()
 
     try:
@@ -72,7 +72,7 @@ def retrieve_information(query: str) -> Dict:
 class RAGAgent:
     def __init__(self):
         init_openai_client()
-        from backend.rag_agent import retrieve_information
+        from rag_agent import retrieve_information
 
         self.agent = Agent(
             name="RAG Assistant",

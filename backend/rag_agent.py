@@ -1,166 +1,181 @@
-from agents import Agent, Runner 
-from backend.my_config import openrouter_key, open_router_config
-from backend.retrieval import retrieve_data
-from pydantic import BaseModel
-from typing import List, Dict , Literal
-
+import os
+import json
 import logging
+import time
+from typing import Dict, List, Any
+
+from dotenv import load_dotenv
+from openai import AsyncOpenAI 
+from agents import Agent, Runner, set_default_openai_client 
+from agents import function_tool
+
+# --------------------------------------------------
+# ENV & LOGGING
+# --------------------------------------------------
+load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --------------------------------------------------
+# OPENAI CLIENT INIT (ONCE)
+# --------------------------------------------------
+def init_openai_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not found")
 
-QDRANT_COLLECTION_NAME="physical_ai_textbook"
+    client = AsyncOpenAI(api_key=api_key)
+    set_default_openai_client(client)
+
+def retrieve_information_internal(query: str) -> Dict:
+    from backend.retrieval import RAGRetriever
+    retriever = RAGRetriever()
+
+    try:
+        raw = retriever.retrieve(query_text=query, top_k=3, threshold=0.3)
+        parsed = json.loads(raw)
+
+        chunks = []
+        for r in parsed.get("results", []):
+            chunks.append({
+                "text": r["content"],
+                "source": r["url"],
+                "score": r["similarity_score"]
+            })
+
+        return {
+            "retrieved_chunks": chunks,
+            "total_results": len(chunks)
+        }
+
+    except Exception as e:
+        return {
+            "retrieved_chunks": [],
+            "total_results": 0,
+            "error": str(e)
+        }
+
+# --------------------------------------------------
+# TOOL: RETRIEVAL
+# --------------------------------------------------
+
+@function_tool
+def retrieve_information(query: str) -> Dict:
+    return retrieve_information_internal(query)
 
 
 
+# --------------------------------------------------
+# RAG AGENT
+# --------------------------------------------------
+class RAGAgent:
+    def __init__(self):
+        init_openai_client()
+        from backend.rag_agent import retrieve_information
 
-class ChatMessage(BaseModel):
-    role: Literal["user", "bot"]
-    text: str
-
-class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
-
-
-
-
-async def chat(request: ChatRequest):
-    
-    print("📥 Received messages:", request.messages)
-    
-    agent = Agent(
-        name="Physical AI & Humanoid Robotics Agent",
-        instructions= """
+        self.agent = Agent(
+            name="RAG Assistant",
+            instructions= """
 You are the **Specialized AI Assistant** for the **Physical AI & Humanoid Robotics Capstone Course**.
 Your primary function is to support students in understanding the curriculum, hardware prerequisites, system architectures, and foundational principles that connect a digital AI "brain" to a physical robotic body.
 
 
----
+You are a course assistant.
+- Greet users politely if they greet you.
+- Answer ONLY using retrieved course content.
+- If information is missing, say it is not covered.
+- Do NOT mention sources unless explicitly asked.
 
-## **COURSE CONTEXT**
 
-**Domain:** Embodied AI — the integration of machine intelligence with robots operating in simulated and real physical environments.
-**Objective:** Guide students as they apply AI techniques to humanoid and quadruped robots using **ROS 2**, **Gazebo**, **Unity**, and **NVIDIA Isaac**.
+        """,
+            tools=[retrieve_information],
+            model="gpt-4.1-mini"
+        )
 
----
+        logger.info("RAG Agent initialized")
 
-## **CURRICULUM OVERVIEW**
+    # --------------------------------------------------
+    # PUBLIC METHOD (FastAPI uses this)
+    # --------------------------------------------------
+    async def query_agent(self, query_text: str) -> Dict[str, Any]:
+        return await self._async_query_agent(query_text)
 
-### **1. The Robotic Nervous System (ROS 2)**
-* Node graph architecture
-* Topics, services, actions
-* `rclpy` development
-* URDF modeling and kinematics
-
-### **2. The Digital Twin (Simulation Layer)**
-* **Gazebo** physics-based simulation
-* **Unity** for high-level visualization
-* Collision dynamics, LiDAR, depth camera modeling
-
-### **3. The AI–Robot Brain (NVIDIA Isaac)**
-* Isaac Sim for photorealistic simulation
-* Isaac ROS for perception (e.g., VSLAM)
-* Nav2 for mapping, navigation, motion planning
-
-### **4. Vision–Language–Action (VLA) Systems**
-* Whisper for speech-to-text
-* LLMs for goal decomposition
-* Mapping natural-language commands to ROS 2 action graphs
-* Example: "Clean the room" → perception → navigation → manipulation sequence
-
----
-
-## **HARDWARE REQUIREMENTS (CRITICAL)**
-
-### **Simulation Workstation**
-* **GPU:** NVIDIA RTX 4070 Ti (12GB VRAM) minimum (Recommended: RTX 3090/4090)
-* **CPU:** Intel i7 (13th Gen+) or equivalent
-* **RAM:** 64GB DDR5
-* **OS:** Ubuntu 22.04 LTS
-
-### **Edge AI Deployment**
-* NVIDIA Jetson Orin Nano (8GB) or Orin NX
-
-### **Sensors**
-* Intel RealSense D435i
-* USB IMU (generic)
-* ReSpeaker Microphone Array
-
-### **Robotics Platforms**
-* Unitree Go2 Edu (quadruped proxy)
-* Unitree G1 (humanoid)
-* Hiwonder TonyPi Pro (budget option for kinematics labs)
-
----
-
-## **LAB SETUP OPTIONS**
-
-### **On-Prem (High CapEx)**
-Hardware-owned physical labs using local workstations and robots.
-
-### **Cloud / Ether Lab (High OpEx)**
-* AWS g5.2xlarge GPU instances (~$205/quarter)
-* Jetson kit for local robotic deployment (~$700)
-
----
-
-## **ANSWERING RULES**
-
-### **1. Mandatory Tool Use**
-Before answering **any question** related to:
-* Humanoid robotics
-*  AI
-* ROS 2
-* Isaac
-* Sensors
-* Simulation
-
-You **must call the `retrieve_data` tool** to access relevant information from the course knowledge base.
-Only respond after retrieving and summarizing the data.
-
-### **2. Tone & Style**
-* Technical, academic, and helpful
-* Use Markdown formatting
-* Highlight important terms in **bold**
-
-### **3. Scope**
-* Stick strictly to course material + retrieved knowledge base
-* Avoid unsupported speculation
-* Produce accurate, concise explanations
-
-### **4. Refusals**
-Politely decline unrelated questions (e.g., weather, humor, politics).
-
-### **5. Hardware-Specific Answers**
-* Always include precise specs (VRAM, OS version, CPU class)
-* Identify performance bottlenecks where relevant
-
----
-
-You operate strictly under these constraints and respond consistently according to them.
-        """ 
-    )
-
-    print("⚙️ Running agent (Non-Streamed)...")
+    # --------------------------------------------------
+    # CORE ASYNC LOGIC
+    # --------------------------------------------------
     
+    async def _async_query_agent(self, query_text: str) -> Dict:
+        start_time = time.time()
 
-    conversation_input = "\n".join(
-        [f"{msg.role}: {msg.text}" for msg in request.messages]
-    )
+        try:
+            logger.info(f"Processing query: {query_text}")
 
-    result = await Runner.run(
-        agent,
-        input=conversation_input,
-        run_config=open_router_config,
-    )
+            # 🔥 STEP 1: FORCE retrieval yourself
+            # from backend.rag_agent import retrieve_information
+            retrieval = retrieve_information_internal(query_text)
 
-    print("✅ Response generated successfully")
-    
-    
-    # return {"role": "bot", "text": result.final_output}
-    return {
-        "answer": result.final_output,
-        "metadata": {
-            "model_used": "openrouter"
-        }
-    }
+            chunks = retrieval.get("retrieved_chunks", [])
 
+            if not chunks:
+                return {
+                    "answer": (
+                        "I cannot answer this question because it is not covered "
+                        "in the Physical AI & Humanoid Robotics course material."
+                    ),
+                    "sources": [],
+                    "matched_chunks": [],
+                    "query_time_ms": (time.time() - start_time) * 1000,
+                    "confidence": "low"
+                }
+
+            # 🔒 STEP 2: Build STRICT context
+            context = "\n\n".join(
+                f"[Chunk {i+1}]\n{c['text']}"
+                for i, c in enumerate(chunks)
+            )
+
+            agent_input = f"""
+    You MUST answer ONLY using the context below.
+    If the answer is not explicitly present, say you cannot answer.
+
+    CONTEXT:
+    {context}
+
+    QUESTION:
+    {query_text}
+    """
+
+            # 🤖 STEP 3: Run agent (NO tool dependency now)
+            result = await Runner.run(self.agent, agent_input)
+            answer_text = result.final_output or ""
+
+            return {
+                "answer": answer_text,
+                "sources": [c.get("source") for c in chunks if c.get("source")],
+                "matched_chunks": chunks,
+                "query_time_ms": (time.time() - start_time) * 1000,
+                "confidence": "high"
+            }
+
+        except Exception as e:
+            logger.exception("Agent execution failed")
+            return {
+                "answer": "",
+                "error": str(e),
+                "confidence": "low"
+            }
+
+# --------------------------------------------------
+# CONFIDENCE (OPTIONAL – future use)
+# --------------------------------------------------
+def calculate_confidence(chunks: List[Dict]) -> str:
+    if not chunks:
+        return "low"
+
+    avg = sum(c.get("similarity_score", 0) for c in chunks) / len(chunks)
+    if avg >= 0.7:
+        return "high"
+    elif avg >= 0.4:
+        return "medium"
+    return "low"

@@ -54,13 +54,13 @@ const getBackendUrl = (): string => {
 
 const BACKEND_URL = getBackendUrl();
 
-export const askAgent = async (query: QueryInput): Promise<AgentResponse> => {
+export const askAgent = async (question: QueryInput): Promise<AgentResponse> => {
   const response = await fetch(`${BACKEND_URL}/ask`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(query),
+    body: JSON.stringify(question),
   });
 
   if (!response.ok) {

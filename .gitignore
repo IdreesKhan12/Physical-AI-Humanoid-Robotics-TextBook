@@ -72,5 +72,5 @@ dist/
 .env 
 .env.*
 backend/.env
-backend/my_config.py
+
 
